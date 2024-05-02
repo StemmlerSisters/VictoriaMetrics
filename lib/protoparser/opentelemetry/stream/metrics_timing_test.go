@@ -8,7 +8,7 @@ import (
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/protoparser/opentelemetry/pb"
 )
 
-func BenchmarkParseStream(b *testing.B) {
+func BenchmarkParseMetricsStream(b *testing.B) {
 	samples := []*pb.Metric{
 		generateGauge("my-gauge", ""),
 		generateHistogram("my-histogram", ""),
@@ -24,7 +24,7 @@ func BenchmarkParseStream(b *testing.B) {
 		data := pbRequest.MarshalProtobuf(nil)
 
 		for p.Next() {
-			err := ParseStream(bytes.NewBuffer(data), false, nil, func(_ []prompbmarshal.TimeSeries) error {
+			err := ParseMetricsStream(bytes.NewBuffer(data), false, nil, func(_ []prompbmarshal.TimeSeries) error {
 				return nil
 			})
 			if err != nil {
