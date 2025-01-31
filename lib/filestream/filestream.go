@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/VictoriaMetrics/VictoriaMetrics/lib/fs/fsutil"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/logger"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/memory"
 	"github.com/VictoriaMetrics/metrics"
@@ -241,8 +242,10 @@ func (w *Writer) MustClose() {
 	putBufioWriter(w.bw)
 	w.bw = nil
 
-	if err := w.f.Sync(); err != nil {
-		logger.Panicf("FATAL: cannot sync file %q: %d", w.f.Name(), err)
+	if !fsutil.IsFsyncDisabled() {
+		if err := w.f.Sync(); err != nil {
+			logger.Panicf("FATAL: cannot sync file %q: %s", w.f.Name(), err)
+		}
 	}
 	if err := w.st.close(); err != nil {
 		logger.Panicf("FATAL: cannot close streamTracker for file %q: %s", w.f.Name(), err)

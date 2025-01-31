@@ -1,5 +1,4 @@
 ---
-sort: 2
 weight: 2
 title: Setup
 menu:
@@ -7,24 +6,22 @@ menu:
     parent: "operator"
     weight: 2
 aliases:
-  - /operator/setup.html
+  - /operator/setup/
+  - /operator/setup/index.html
 ---
-
-# VictoriaMetrics Operator Setup
-
 ## Installing by helm-charts
 
 You can use one of the following official helm-charts with `vmoperator`:
 
-- [victoria-metrics-operator helm-chart](https://github.com/VictoriaMetrics/helm-charts/blob/master/charts/victoria-metrics-operator/README.md)
-- [victoria-metrics-k8s-stack helm chart](https://github.com/VictoriaMetrics/helm-charts/blob/master/charts/victoria-metrics-k8s-stack/README.md)
+- [victoria-metrics-operator helm-chart](https://docs.victoriametrics.com/helm/victoriametrics-operator)
+- [victoria-metrics-k8s-stack helm chart](https://docs.victoriametrics.com/helm/victoriametrics-k8s-stack)
   (includes the `victoria-metrics-operator` helm-chart and other components for full-fledged k8s monitoring, is an alternative for [kube-prometheus-stack](https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack)).
 
 For installing VictoriaMetrics operator with helm-chart follow the instructions from README of the corresponding helm-chart
-([this](https://github.com/VictoriaMetrics/helm-charts/blob/master/charts/victoria-metrics-operator/README.md)
-or [this](https://github.com/VictoriaMetrics/helm-charts/blob/master/charts/victoria-metrics-k8s-stack/README.md)).
+([this](https://docs.victoriametrics.com/helm/victoriametrics-operator)
+or [this](https://docs.victoriametrics.com/helm/victoriametrics-k8s-stack)).
 
-in addition, you can use [quickstart guide](./quick-start.md) for 
+in addition, you can use [quickstart guide](https://docs.victoriametrics.com/operator/quick-start) for
 installing VictoriaMetrics operator with helm-chart.
 
 ## Installing by Manifest
@@ -37,35 +34,30 @@ We suggest use the latest release.
 ```sh
 # Get latest release version from https://github.com/VictoriaMetrics/operator/releases/latest
 export VM_VERSION=`basename $(curl -fs -o/dev/null -w %{redirect_url} https://github.com/VictoriaMetrics/operator/releases/latest)`
-wget https://github.com/VictoriaMetrics/operator/releases/download/$VM_VERSION/bundle_crd.zip
-unzip  bundle_crd.zip
+
+# Download manifest with webhook (requires CertManager to be preinstalled)
+wget -O install.yaml https://github.com/VictoriaMetrics/operator/releases/download/$VM_VERSION/install-with-webhook.yaml
+
+# Or download manifest without webhook
+wget -O install.yaml https://github.com/VictoriaMetrics/operator/releases/download/$VM_VERSION/install-without-webhook.yaml
 ```
 
-Operator use `monitoring-system` namespace, but you can install it to specific namespace with command:
+Operator use `vm` namespace, but you can install it to specific namespace with command:
 
 ```sh
-sed -i "s/namespace: monitoring-system/namespace: YOUR_NAMESPACE/g" release/operator/*
+sed -i "s/namespace: vm/namespace: YOUR_NAMESPACE/g" install.yaml
 ```
 
-First of all, you  have to create [custom resource definitions](https://github.com/VictoriaMetrics/operator):
-
-```sh
-kubectl apply -f release/crds
-```
-
-Then you need RBAC for operator, relevant configuration for the release can be found at `release/operator/rbac.yaml`.
-
-Change configuration for operator at `release/operator/manager.yaml`, possible settings: [operator-settings](/operator/vars.html)
 and apply it:
 
 ```sh
-kubectl apply -f release/operator/
+kubectl apply -f install.yaml
 ```
 
 Check the status of operator
 
 ```sh
-kubectl get pods -n monitoring-system
+kubectl get pods -n YOUR_NAMESPACE
 
 #NAME                           READY   STATUS    RESTARTS   AGE
 #vm-operator-667dfbff55-cbvkf   1/1     Running   0          101s
@@ -78,15 +70,22 @@ You can install operator using [Kustomize](https://kustomize.io/) by pointing to
 ```sh
 # Get latest release version from https://github.com/VictoriaMetrics/operator/releases/latest
 export VM_VERSION=`basename $(curl -fs -o/dev/null -w %{redirect_url} https://github.com/VictoriaMetrics/operator/releases/latest)`
+export NAMESPACE="whatever-namespace"
+
+# Overlay "base-with-webhook" installs operator with webhook (requires CertManager to be preinstalled). Replace "base-with-webhook" with "default"
+export OVERLAY="base-with-webhook"
 
 cat << EOF > kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-- github.com/VictoriaMetrics/operator/config/default?ref=${VM_VERSION}
+- github.com/VictoriaMetrics/operator/config/${OVERLAY}?ref=${VM_VERSION}
+
+namespace: ${NAMESPACE}
 
 images:
-- name: victoriametrics/operator
+- name: manager
+  newName: victoriametrics/operator
   newTag: ${VM_VERSION}
 EOF
 ```
@@ -108,11 +107,54 @@ kubectl apply -f monitoring.yaml
 Check the status of operator
 
 ```sh
-kubectl get pods -n monitoring-system
+kubectl get pods -n whatever-namespace
 
 #NAME                           READY   STATUS    RESTARTS   AGE
 #vm-operator-667dfbff55-cbvkf   1/1     Running   0          101s
 ```
+
+## Installing by OLM
+
+### Installing to K8s
+
+VictoriaMetrics operator OLM package is available at [OperatorHub](https://operatorhub.io/operator/victoriametrics-operator).
+Installation instructions are available there.
+
+### Installing to Openshift
+
+Create `Subscription` manifest with `installPlanApproval` set to `Manual` to prevent unexpected upgrades.
+
+```yaml
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: victoriametrics-operator
+  namespace: vm
+spec:
+  channel: beta
+  installPlanApproval: Manual
+  name: victoriametrics-operator
+  source: community-operators
+  sourceNamespace: openshift-marketplace
+  startingCSV: victoriametrics-operator.v0.46.4
+```
+
+Apply manifest
+
+```shell
+oc apply -f manifest.yaml
+```
+
+After some time operator should be up and running in `vm` namespace
+
+```shell
+oc get pods -n vm
+```
+
+### Run locally
+
+It's possible to build and run OLM package locally on Kind K8s cluster using `make deploy-kind-olm`.
+Command builds operator image, bundle and index images, runs Kind with a local registry and deploys OLM package to Kind.
 
 ## Installing to ARM
 
@@ -120,4 +162,4 @@ There is no need in an additional configuration for ARM. Operator and VictoriaMe
 
 ## Configuring
 
-You can read detailed instructions about operator configuring in [this document](./configuration.md).
+You can read detailed instructions about operator configuring in [this document](https://docs.victoriametrics.com/operator/configuration).

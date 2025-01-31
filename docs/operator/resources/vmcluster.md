@@ -1,19 +1,17 @@
 ---
-sort: 6
 weight: 6
 title: VMCluster
 menu:
   docs:
-    parent: "operator-custom-resources"
+    identifier: operator-cr-vmcluster
+    parent: operator-cr
     weight: 6
 aliases:
-  - /operator/resources/vmcluster.html
+  - /operator/resources/vmcluster/
+  - /operator/resources/vmcluster/index.html
 ---
-
-# VMCluster
-
 `VMCluster` represents a high-available and fault-tolerant version of VictoriaMetrics database.
-The `VMCluster` CRD defines a [cluster version VM](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html).
+The `VMCluster` CRD defines a [cluster version VM](https://docs.victoriametrics.com/Cluster-VictoriaMetrics).
 
 For each `VMCluster` resource, the Operator creates:
 
@@ -38,12 +36,50 @@ The most important is `VM_PODWAITREADYTIMEOUT=80s` - it controls how long to wai
 
 ## Specification
 
-You can see the full actual specification of the `VMCluster` resource in the **[API docs -> VMCluster](../api.md#vmcluster)**.
+You can see the full actual specification of the `VMCluster` resource in the **[API docs -> VMCluster](https://docs.victoriametrics.com/operator/api#vmcluster)**.
 
 If you can't find necessary field in the specification of the custom resource,
-see [Extra arguments section](./README.md#extra-arguments).
+see [Extra arguments section](./#extra-arguments).
 
 Also, you can check out the [examples](#examples) section.
+
+## Requests Load-Balancing
+
+ Operator provides enhanced load-balancing mechanism for `vminsert` and `vmselect` clients. By default, operator uses built-in Kubernetes [service]() with `clusterIP` type for clients connection. It's good solution for short lived connections. But it acts poorly with long-lived TCP sessions and leads to the uneven resources utilization for `vmselect` and `vminsert` components.
+
+ Consider the following example:
+
+![CR](vmcluster_default_balancer.webp)
+
+ In this case clients could establish multiple connections to the same `pod` via `service`. And client requests will be served only by subset of `pods`.
+
+ Operator allows to tweak this behaviour with enabled `requestsLoadbalacing`:
+
+```yaml
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMCluster
+metadata:
+  name: with-balancer
+spec:
+  retentionPeriod: "4"
+  replicationFactor: 1
+  requestsLoadBalancer:
+    enabled: true
+    spec:
+      replicaCount: 2
+```
+
+ Operator will deploy `VMAuth` deployment with 2 replicas. And update vminsert and vmselect services to point to `vmauth`.
+ In addition, operator will create 3 additional services with the following pattern:
+
+- vminsertinternal-CLUSTER_NAME - needed for vmselect pod discovery
+- vmselectinternal-CLUSTER_NAME - needed for vminsert pod discovery
+- vmclusterlb-CLUSTER_NAME - needed for metrics collection and exposing `vmselect` and `vminsert` components via `VMAuth` balancer.
+
+ Network scheme with load-balancing:
+ ![CR](vmcluster_with_balancer.webp)
+
+ Operator allows to customise load-balancing configuration with `requestsLoadBalancer.Spec` settings.
 
 ## High availability
 
@@ -51,9 +87,9 @@ The cluster version provides a full set of high availability features - metrics 
 
 First, we recommend familiarizing yourself with the high availability tools provided by "VictoriaMetrics Cluster" itself:
 
-- [High availability](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#high-availability),
-- [Cluster availability](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#cluster-availability),
-- [Replication and data safety](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#replication-and-data-safety).
+- [High availability](https://docs.victoriametrics.com/Cluster-VictoriaMetrics#high-availability),
+- [Cluster availability](https://docs.victoriametrics.com/Cluster-VictoriaMetrics#cluster-availability),
+- [Replication and data safety](https://docs.victoriametrics.com/Cluster-VictoriaMetrics#replication-and-data-safety).
 
 `VMCluster` supports all listed in the above-mentioned articles parameters and features:
 
@@ -245,7 +281,7 @@ spec:
 ```
 
 If these parameters are not specified, then,
-by default all `VMCluster` pods have resource requests and limits from the default values of the following [operator parameters](../configuration.md):
+by default all `VMCluster` pods have resource requests and limits from the default values of the following [operator parameters](https://docs.victoriametrics.com/operator/configuration):
 
 - `VM_VMCLUSTERDEFAULT_VMSTORAGEDEFAULT_RESOURCE_LIMIT_MEM` - default memory limit for `VMCluster/vmstorage` pods,
 - `VM_VMCLUSTERDEFAULT_VMSTORAGEDEFAULT_RESOURCE_LIMIT_CPU` - default memory limit for `VMCluster/vmstorage` pods,
@@ -275,30 +311,30 @@ Also, you can specify requests without limits - in this case default values for 
 ## Enterprise features
 
 VMCluster supports following features 
-from [VictoriaMetrics Enterprise](https://docs.victoriametrics.com/enterprise.html#victoriametrics-enterprise):
+from [VictoriaMetrics Enterprise](https://docs.victoriametrics.com/enterprise#victoriametrics-enterprise):
 
-- [Downsampling](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#downsampling)
-- [Multiple retentions / Retention filters](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#retention-filters)
-- [Advanced per-tenant statistic](https://docs.victoriametrics.com/PerTenantStatistic.html)
-- [mTLS for cluster components](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#mtls-protection)
-- [Backup automation](https://docs.victoriametrics.com/vmbackupmanager.html)
+- [Downsampling](https://docs.victoriametrics.com/Cluster-VictoriaMetrics#downsampling)
+- [Multiple retentions / Retention filters](https://docs.victoriametrics.com/Cluster-VictoriaMetrics#retention-filters)
+- [Advanced per-tenant statistic](https://docs.victoriametrics.com/pertenantstatistic)
+- [mTLS for cluster components](https://docs.victoriametrics.com/Cluster-VictoriaMetrics#mtls-protection)
+- [Backup automation](https://docs.victoriametrics.com/vmbackupmanager)
 
 VMCluster doesn't support yet feature 
-[Automatic discovery for vmstorage nodes](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#automatic-vmstorage-discovery).
+[Automatic discovery for vmstorage nodes](https://docs.victoriametrics.com/Cluster-VictoriaMetrics#automatic-vmstorage-discovery).
 
-For using Enterprise version of [vmcluster](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html)
+For using Enterprise version of [vmcluster](https://docs.victoriametrics.com/Cluster-VictoriaMetrics)
 you need to change version of `VMCluster` to version with `-enterprise` suffix using [Version management](#version-management).
 
 All the enterprise apps require `-eula` command-line flag to be passed to them.
-This flag acknowledges that your usage fits one of the cases listed on [this page](https://docs.victoriametrics.com/enterprise.html#victoriametrics-enterprise).
-So you can use [extraArgs](./README.md#extra-arguments) for passing this flag to `VMCluster`.
+This flag acknowledges that your usage fits one of the cases listed on [this page](https://docs.victoriametrics.com/enterprise#victoriametrics-enterprise).
+So you can use [extraArgs](./#extra-arguments) for passing this flag to `VMCluster`.
 
 ### Downsampling
 
-After that you can pass [Downsampling](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#downsampling)
-flag to `VMCluster/vmselect` and `VMCluster/vmstorage` with [extraArgs](./README.md#extra-arguments) too.
+After that you can pass [Downsampling](https://docs.victoriametrics.com/Cluster-VictoriaMetrics#downsampling)
+flag to `VMCluster/vmselect` and `VMCluster/vmstorage` with [extraArgs](./#extra-arguments) too.
 
-Here are complete example for [Downsampling](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#downsampling):
+Here are complete example for [Downsampling](https://docs.victoriametrics.com/Cluster-VictoriaMetrics#downsampling):
 
 ```yaml
 apiVersion: operator.victoriametrics.com/v1beta1
@@ -319,7 +355,7 @@ spec:
       eula: true
       
       # using enterprise features: Downsampling
-      # more details about downsampling you can read on https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#downsampling
+      # more details about downsampling you can read on https://docs.victoriametrics.com/Cluster-VictoriaMetrics#downsampling
       downsampling.period: 30d:5m,180d:1h,1y:6h,2y:1d
       
   vmstorage:
@@ -334,7 +370,7 @@ spec:
       eula: true
 
       # using enterprise features: Downsampling
-      # more details about downsampling you can read on https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#downsampling
+      # more details about downsampling you can read on https://docs.victoriametrics.com/Cluster-VictoriaMetrics#downsampling
       downsampling.period: 30d:5m,180d:1h,1y:6h,2y:1d
 
   # ...other fields...
@@ -342,10 +378,10 @@ spec:
 
 ### Retention filters
 
-You can pass [Retention filters](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#retention-filters)
-flag to  `VMCluster/vmstorage` with [extraArgs](./README.md#extra-arguments).
+You can pass [Retention filters](https://docs.victoriametrics.com/Cluster-VictoriaMetrics#retention-filters)
+flag to  `VMCluster/vmstorage` with [extraArgs](./#extra-arguments).
 
-Here are complete example for [Retention filters](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#retention-filters):
+Here are complete example for [Retention filters](https://docs.victoriametrics.com/Cluster-VictoriaMetrics#retention-filters):
 
 ```yaml
 apiVersion: operator.victoriametrics.com/v1beta1
@@ -366,7 +402,7 @@ spec:
       eula: true
 
       # using enterprise features: Retention filters
-      # more details about retention filters you can read on https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#retention-filters
+      # more details about retention filters you can read on https://docs.victoriametrics.com/Cluster-VictoriaMetrics#retention-filters
       retentionFilter: '{vm_account_id="5",env="dev"}:5d,{vm_account_id="5",env="prod"}:5y'
 
   # ...other fields...
@@ -374,10 +410,10 @@ spec:
 
 ### Advanced per-tenant statistic
 
-For using [Advanced per-tenant statistic](https://docs.victoriametrics.com/PerTenantStatistic.html)
+For using [Advanced per-tenant statistic](https://docs.victoriametrics.com/PerTenantStatistic)
 you only need to [enable Enterprise version of vmcluster components](#enterprise-features) 
 and operator will automatically create 
-[Scrape objects](./vmagent.md#scraping) for cluster components.
+[Scrape objects](https://docs.victoriametrics.com/operator/resources/vmagent#scraping) for cluster components.
 
 ```yaml
 apiVersion: operator.victoriametrics.com/v1beta1
@@ -422,16 +458,16 @@ spec:
   # ...other fields...
 ```
 
-After that [VMAgent](./vmagent.md) will automatically 
-scrape [Advanced per-tenant statistic](https://docs.victoriametrics.com/PerTenantStatistic.html) for cluster components.
+After that [VMAgent](https://docs.victoriametrics.com/operator/resources/vmagent) will automatically
+scrape [Advanced per-tenant statistic](https://docs.victoriametrics.com/PerTenantStatistic) for cluster components.
 
 ### mTLS protection
 
-You can pass [mTLS protection](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#mtls-protection)
-flags to `VMCluster/vmstorage`, `VMCluster/vmselect` and `VMCluster/vminsert` with [extraArgs](./README.md#extra-arguments) and mount secret files 
+You can pass [mTLS protection](https://docs.victoriametrics.com/Cluster-VictoriaMetrics#mtls-protection)
+flags to `VMCluster/vmstorage`, `VMCluster/vmselect` and `VMCluster/vminsert` with [extraArgs](./#extra-arguments) and mount secret files
 with `extraVolumes` and `extraVolumeMounts` fields.
 
-Here are complete example for [mTLS protection](https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#mtls-protection)
+Here are complete example for [mTLS protection](https://docs.victoriametrics.com/Cluster-VictoriaMetrics#mtls-protection)
 
 ```yaml
 apiVersion: operator.victoriametrics.com/v1beta1
@@ -452,7 +488,7 @@ spec:
       eula: true
       
       # using enterprise features: mTLS protection
-      # more details about mTLS protection you can read on https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#mtls-protection
+      # more details about mTLS protection you can read on https://docs.victoriametrics.com/Cluster-VictoriaMetrics#mtls-protection
       cluster.tls: true
       cluster.tlsCAFile: /etc/mtls/ca.crt
       cluster.tlsCertFile: /etc/mtls/vmselect.crt
@@ -477,7 +513,7 @@ spec:
       eula: true
 
       # using enterprise features: mTLS protection
-      # more details about mTLS protection you can read on https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#mtls-protection
+      # more details about mTLS protection you can read on https://docs.victoriametrics.com/Cluster-VictoriaMetrics#mtls-protection
       cluster.tls: true
       cluster.tlsCAFile: /etc/mtls/ca.crt
       cluster.tlsCertFile: /etc/mtls/vminsert.crt
@@ -507,7 +543,7 @@ spec:
       eula: true
 
       # using enterprise features: mTLS protection
-      # more details about mTLS protection you can read on https://docs.victoriametrics.com/Cluster-VictoriaMetrics.html#mtls-protection
+      # more details about mTLS protection you can read on https://docs.victoriametrics.com/Cluster-VictoriaMetrics#mtls-protection
       cluster.tls: true
       cluster.tlsCAFile: /etc/mtls/ca.crt
       cluster.tlsCertFile: /etc/mtls/$(POD).crt
@@ -574,7 +610,7 @@ on [this page](https://gist.github.com/f41gh7/76ed8e5fb1ebb9737fe746bae9175ee6#g
 
 ### Backup automation
 
-You can check [vmbackupmanager documentation](https://docs.victoriametrics.com/vmbackupmanager.html) for backup automation.
+You can check [vmbackupmanager documentation](https://docs.victoriametrics.com/vmbackupmanager) for backup automation.
 It contains a description of the service and its features. This section covers vmbackumanager integration in vmoperator.
 
 `VMCluster` has built-in backup configuration, it uses `vmbackupmanager` - proprietary tool for backups.
@@ -588,21 +624,21 @@ kind: VMCluster
 metadata:
   name: vmcluster-ent-example
 spec:
-
   vmstorage:
     vmBackup:
-      # should be true and means that you have the legal right to run a vmstorage enterprise
-      # that can either be a signed contract or an email with confirmation to run the service in a trial period
-      # https://victoriametrics.com/legal/esa/
-      acceptEULA: true
-
-      # using enterprise features: Backup automation
-      # more details about backup automation you can read on https://docs.victoriametrics.com/vmbackupmanager.html      
+      # this feature is only available in Victoriametrics Enterprise
+      # more details about backup automation you can read on https://docs.victoriametrics.com/vmbackupmanager
       destination: "s3://your_bucket/folder"
+      # Read the object storage credentials from a secret
       credentialsSecret:
         name: remote-storage-keys
         key: credentials
-
+      # customS3Endpoint: 'https://s3.example.com' # uncomment and adjust if you using s3 compatible storage instead of AWS s3
+      # uncomment and adjust to fit your backup schedule
+      # disableHourly: false
+      # disableDaily: false
+      # disableWeekly: false
+      # disableMonthly: false
   # ...other fields...
 
 ---
@@ -622,13 +658,13 @@ stringData:
 **NOTE**: for cluster version operator adds suffix for destination: `"s3://your_bucket/folder"`, it becomes `"s3://your_bucket/folder/$(POD_NAME)"`.
 It's needed to make consistent backups for each storage node.
 
-You can read more about backup configuration options and mechanics [here](https://docs.victoriametrics.com/vmbackupmanager.html)
+You can read more about backup configuration options and mechanics [here](https://docs.victoriametrics.com/vmbackupmanager)
 
-Possible configuration options for backup crd can be found at [link](../api.md#vmbackup)
+Possible configuration options for backup crd can be found at [link](https://docs.victoriametrics.com/operator/api#vmbackup)
 
-**Using VMBackupmanager for restoring backups** in Kubernetes environment is described [here](https://docs.victoriametrics.com/vmbackupmanager.html#how-to-restore-in-kubernetes).
+**Using VMBackupmanager for restoring backups** in Kubernetes environment is described [here](https://docs.victoriametrics.com/vmbackupmanager#how-to-restore-in-kubernetes).
 
-Also see VMCLuster example spec [here](https://github.com/VictoriaMetrics/operator/blob/master/config/examples/vmcluster_with_backuper.yaml).
+Also see VMCluster example spec [here](https://github.com/VictoriaMetrics/operator/blob/master/config/examples/vmcluster_with_backuper.yaml).
 
 ## Examples
 

@@ -734,11 +734,11 @@ func (sbh *sortBlocksHeap) Swap(i, j int) {
 	sbs[i], sbs[j] = sbs[j], sbs[i]
 }
 
-func (sbh *sortBlocksHeap) Push(x interface{}) {
+func (sbh *sortBlocksHeap) Push(x any) {
 	sbh.sbs = append(sbh.sbs, x.(*sortBlock))
 }
 
-func (sbh *sortBlocksHeap) Pop() interface{} {
+func (sbh *sortBlocksHeap) Pop() any {
 	sbs := sbh.sbs
 	v := sbs[len(sbs)-1]
 	sbs[len(sbs)-1] = nil
@@ -765,7 +765,7 @@ func putSortBlocksHeap(sbh *sortBlocksHeap) {
 
 var sbhPool sync.Pool
 
-// DeleteSeries deletes time series matching the given tagFilterss.
+// DeleteSeries deletes time series matching the given search query.
 func DeleteSeries(qt *querytracer.Tracer, sq *storage.SearchQuery, deadline searchutils.Deadline) (int, error) {
 	qt = qt.NewChild("delete series: %s", sq)
 	defer qt.Done()
@@ -774,7 +774,7 @@ func DeleteSeries(qt *querytracer.Tracer, sq *storage.SearchQuery, deadline sear
 	if err != nil {
 		return 0, err
 	}
-	return vmstorage.DeleteSeries(qt, tfss)
+	return vmstorage.DeleteSeries(qt, tfss, sq.MaxMetrics)
 }
 
 // LabelNames returns label names matching the given sq until the given deadline.
@@ -1084,7 +1084,7 @@ func (xw *exportWork) reset() {
 }
 
 var exportWorkPool = &sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return &exportWork{}
 	},
 }
@@ -1192,6 +1192,11 @@ func ProcessSearchQuery(qt *querytracer.Tracer, sq *storage.SearchQuery, deadlin
 			return nil, fmt.Errorf("timeout exceeded while fetching data block #%d from storage: %s", blocksRead, deadline.String())
 		}
 		br := sr.MetricBlockRef.BlockRef
+
+		// Take into account all the samples in the block when checking for *maxSamplesPerQuery limit,
+		// since CPU time is spent on unpacking all the samples in the block, even if only a few samples
+		// are left then because of the given time range.
+		// This allows effectively limiting CPU resources used per query.
 		samples += br.RowsCount()
 		if *maxSamplesPerQuery > 0 && samples > *maxSamplesPerQuery {
 			putTmpBlocksFile(tbf)
