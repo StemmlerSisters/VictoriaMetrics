@@ -67,11 +67,11 @@ const Modal: FC<ModalProps> = ({
       })}
       onMouseDown={onClose}
     >
-      <div className="vm-modal-content">
-        <div
-          className="vm-modal-content-header"
-          onMouseDown={handleMouseDown}
-        >
+      <div
+        className="vm-modal-content"
+        onMouseDown={handleMouseDown}
+      >
+        <div className="vm-modal-content-header">
           {title && (
             <div className="vm-modal-content-header__title">
               {title}
@@ -88,9 +88,10 @@ const Modal: FC<ModalProps> = ({
             </Button>
           </div>
         </div>
+        {/* tabIndex to fix Ctrl-A */}
         <div
           className="vm-modal-content-body"
-          onMouseDown={handleMouseDown}
+          tabIndex={0}
         >
           {children}
         </div>

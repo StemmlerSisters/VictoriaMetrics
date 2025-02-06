@@ -1,35 +1,33 @@
 ---
-sort: 9
 weight: 9
 title: VMProbe
 menu:
   docs:
-    parent: "operator-custom-resources"
+    identifier: operator-cr-vmprobe
+    parent: operator-cr
     weight: 9
 aliases:
-  - /operator/resources/vmprobe.html
+  - /operator/resources/vmprobe/
+  - /operator/resources/vmprobe/index.html
 ---
-
-# VMProbe
-
 The `VMProbe` CRD provides probing target ability with some external prober. 
 The most common prober is [blackbox exporter](https://github.com/prometheus/blackbox_exporter).
-By specifying configuration at CRD, operator generates config for [VMAgent](./vmagent.md)
+By specifying configuration at CRD, operator generates config for [VMAgent](https://docs.victoriametrics.com/vmagent)
 and syncs it. It's possible to use static targets or use standard k8s discovery mechanism with `Ingress`.
 
-`VMProbe` object generates part of [VMAgent](./vmagent.md) configuration;
+`VMProbe` object generates part of [VMAgent](https://docs.victoriametrics.com/vmagent) configuration;
 It has various options for scraping configuration of target (with basic auth, tls access, by specific port name etc.).
 
 You have to configure blackbox exporter before you can use this feature. 
-The second requirement is [VMAgent](./vmagent.md) selectors,
+The second requirement is [VMAgent](https://docs.victoriametrics.com/operator/resources/vmagent) selectors,
 it must match your `VMProbe` by label or namespace selector. `VMAgent` `probeSelector` must match `VMProbe` labels.
 
-See more details about selectors [here](./vmagent.md#scraping).
+See more details about selectors [here](https://docs.victoriametrics.com/operator/resources/vmagent#scraping).
 
 ## Specification
 
 You can see the full actual specification of the `VMProbe` resource in
-the **[API docs -> VMProbe](../api.md#vmprobe)**.
+the **[API docs -> VMProbe](https://docs.victoriametrics.com/operator/api#vmprobe)**.
 
 Also, you can check out the [examples](#examples) section.
 
@@ -38,13 +36,13 @@ Also, you can check out the [examples](#examples) section.
 The `VMProbe` CRD from VictoriaMetrics Operator is a drop-in replacement
 for the Prometheus `Probe` from prometheus-operator.
 
-More details about migration from prometheus-operator you can read in [this doc](../migration.md).
+More details about migration from prometheus-operator you can read in [this doc](https://docs.victoriametrics.com/operator/migration).
 
 ## Examples
 
 ### Static targets
 
-It will probe `VMAgent` with url - `vmagent-example-vmagent.default.svc:9115/heath` with blackbox url:
+It will probe `VMAgent` with url - `vmagent-example-vmagent.default.svc:9115/health` with blackbox url:
 `prometheus-blackbox-exporter.default.svc:9115` and module `http_2xx` 
 (it was specified at [blackbox configmap](#blackbox-exporter)).
 
