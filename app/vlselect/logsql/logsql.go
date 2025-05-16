@@ -514,6 +514,11 @@ func ProcessLiveTailRequest(ctx context.Context, w http.ResponseWriter, r *http.
 	if !ok {
 		logger.Panicf("BUG: it is expected that http.ResponseWriter (%T) supports http.Flusher interface", w)
 	}
+
+	w.Header().Set("Content-Type", "application/x-ndjson")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	flusher.Flush()
+
 	qOrig := q
 	for {
 		q = qOrig.CloneWithTimeFilter(end, start, end)
@@ -887,7 +892,7 @@ func ProcessQueryRequest(ctx context.Context, w http.ResponseWriter, r *http.Req
 		shard.sw = sw
 	}
 	defer func() {
-		shards := bwShards.GetSlice()
+		shards := bwShards.All()
 		for _, shard := range shards {
 			shard.FlushIgnoreErrors()
 		}

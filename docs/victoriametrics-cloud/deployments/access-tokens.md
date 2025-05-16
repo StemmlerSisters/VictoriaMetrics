@@ -1,5 +1,5 @@
 ---
-title : "How to write data"
+title : "Access tokens"
 weight: 2
 menu:
   docs:
@@ -32,7 +32,7 @@ This best practice will help you to, not only enforce security across your platf
 different data sources and take action when/if needed.
 
 For instance, if you have two separate Kubernetes clusters, you can [create separate write access tokens](#how-to-create-access-tokens) 
-for [vmagent](https://docs.victoriametrics.com/vmagent/) in each cluster. In this way, every request is easily
+for [vmagent](https://docs.victoriametrics.com/victoriametrics/vmagent/) in each cluster. In this way, every request is easily
 identified and managed. The same applies to reading data: you may create separate tokens for different Grafana
 instances with read-only access.
 
@@ -45,6 +45,7 @@ It allows to:
 - Secure access partially in case of a leak
 
 Each Access token has a limit for concurrent requests. You may find more details about it on the [Tier Parameters and Flag Parameters Configuration](https://docs.victoriametrics.com/victoriametrics-cloud/tiers-parameters/) page.
+You can also check current concurrent requests value for each token on the "Monitoring" tab of the deployment page in the graph "Access token concurrent requests".
 
 ## How to create access tokens
 
@@ -53,8 +54,8 @@ Each Access token has a limit for concurrent requests. You may find more details
 3. Enter the name of the token (for example "vmagent prod")
 4. And select the access level:
    - **Read** - read-only access to the deployment (for data querying tools like Grafana, Perses, etc.)
-   - **Write** - write-only access to the deployment (for data collectors like [vmagent](https://docs.victoriametrics.com/vmagent/, Prometheus, OpenTelemetry Collector, Telegraf, etc.)
-   - **Read/Write** - read and write access to the deployment (for tools which need to read and write data, like [vmalert](https://docs.victoriametrics.com/vmalert/))
+   - **Write** - write-only access to the deployment (for data collectors like [vmagent](https://docs.victoriametrics.com/victoriametrics/vmagent/, Prometheus, OpenTelemetry Collector, Telegraf, etc.)
+   - **Read/Write** - read and write access to the deployment (for tools which need to read and write data, like [vmalert](https://docs.victoriametrics.com/victoriametrics/vmalert/))
 5. For **Cluster deployments** you can also select a specific **tenant** in "Advanced Settings". This will make the token to only work for the specified tenant. Find more details about this option in [How to work with tenants in cluster deployments](#how-to-work-with-tenants-in-cluster-deployments)) section. 
 6. Click "Generate" button
 
@@ -87,7 +88,7 @@ Authorization: Bearer <SECRET_VAUE>
 Each deployment has one access endpoint, i.e., the URL used to communicate with your deployment's API 
 for [writing and reading](#how-to-write-and-read-data-with-access-tokens) data.
 
-You can find it in the "Overview" tab on the deployment page:
+You can find it on "Access tokens" tab or "Overview" tab of the deployment page:
 
 ![Access endpoint](access-endpoint.webp)
 
@@ -124,14 +125,14 @@ You can also open the Examples section of Access tokens:
 4. Click "Examples" button and go "Write" or "Read" tab in example dialog
 5. Choose one of the available examples: 
    
-   - For writing: [vmagent](https://docs.victoriametrics.com/vmagent/), Prometheus or CURL.
+   - For writing: [vmagent](https://docs.victoriametrics.com/victoriametrics/vmagent/), Prometheus or CURL.
    - For reading: Grafana or CURL.
    
    You can click on the button in the top right corner to copy command or config to clipboard with the access token substituted in it.
 
 ## How to revoke access tokens
 
-1. Make sure the token is no longer in use
+1. Make sure the token is no longer in use. You can check "Last used at" column on "Access tokens" tab of the deployment page for that.
 2. Go to the "Access tokens" tab on the [deployment page](https://console.victoriametrics.cloud/deployments)
 3. Find the required token in the list
 4. Click "..." button in the Actions column next to the required token in the list
